@@ -1,0 +1,17 @@
+{"time":"2024-10-29T18:39:05.1079295-04:00","level":"INFO","msg":"using version","core version":"0.18.5"}
+{"time":"2024-10-29T18:39:05.1079295-04:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\gabma\\Downloads\\Text2Music_Ai\\wandb\\offline-run-20241029_183905-lv3k8qc0\\logs\\debug-core.log"}
+{"time":"2024-10-29T18:39:05.2162164-04:00","level":"INFO","msg":"created new stream","id":"lv3k8qc0"}
+{"time":"2024-10-29T18:39:05.2162164-04:00","level":"INFO","msg":"stream: started","id":"lv3k8qc0"}
+{"time":"2024-10-29T18:39:05.2162164-04:00","level":"INFO","msg":"sender: started","stream_id":"lv3k8qc0"}
+{"time":"2024-10-29T18:39:05.2162164-04:00","level":"INFO","msg":"handler: started","stream_id":{"value":"lv3k8qc0"}}
+{"time":"2024-10-29T18:39:05.2162164-04:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"lv3k8qc0"}}
+{"time":"2024-10-29T18:39:05.2243643-04:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-10-29T18:39:43.7657357-04:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-10-29T18:39:43.7662683-04:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-10-29T18:39:43.7674179-04:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2024-10-29T18:39:44.7879957-04:00","level":"INFO","msg":"stream: closing","id":"lv3k8qc0"}
+{"time":"2024-10-29T18:39:44.7890272-04:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"lv3k8qc0"}}
+{"time":"2024-10-29T18:39:44.7890272-04:00","level":"ERROR","msg":"sender: received Exit record more than once, ignoring"}
+{"time":"2024-10-29T18:39:44.7890272-04:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"lv3k8qc0"}}
+{"time":"2024-10-29T18:39:44.7911637-04:00","level":"INFO","msg":"sender: closed","stream_id":"lv3k8qc0"}
+{"time":"2024-10-29T18:39:44.7911637-04:00","level":"INFO","msg":"stream: closed","id":"lv3k8qc0"}

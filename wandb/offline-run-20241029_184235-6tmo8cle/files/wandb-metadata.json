@@ -1,0 +1,57 @@
+{
+  "os": "Windows-10-10.0.19045-SP0",
+  "python": "3.11.9",
+  "startedAt": "2024-10-29T22:42:35.478459Z",
+  "args": [
+    "--wav_folder",
+    "C:/Users/gabma/Downloads/Text2Music_Ai/dataset/wavs",
+    "--csv_file",
+    "C:/Users/gabma/Downloads/Text2Music_Ai/dataset/metadata.csv",
+    "--hidden_dim",
+    "512",
+    "--time_steps",
+    "1000",
+    "--batch_size",
+    "1",
+    "--epochs",
+    "50",
+    "--learning_rate",
+    "1e-4",
+    "--use_wandb",
+    "--checkpoint_interval",
+    "10"
+  ],
+  "program": "C:\\Users\\gabma\\Downloads\\Text2Music_Ai\\training.py",
+  "codePath": "training.py",
+  "root": "C:\\Users\\gabma\\Downloads\\Text2Music_Ai",
+  "host": "DESKTOP-8RKB05R",
+  "username": "gabma",
+  "executable": "C:\\Users\\gabma\\miniconda3\\envs\\Musio\\python.exe",
+  "codePathLocal": "training.py",
+  "cpu_count": 6,
+  "cpu_count_logical": 12,
+  "gpu": "NVIDIA GeForce GTX 1050 Ti",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "999556489216",
+      "used": "928084992000"
+    }
+  },
+  "memory": {
+    "total": "34264125440"
+  },
+  "cpu": {
+    "count": 6,
+    "countLogical": 12
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce GTX 1050 Ti",
+      "memoryTotal": "4294967296",
+      "cudaCores": 768,
+      "architecture": "Pascal"
+    }
+  ],
+  "cudaVersion": "12.6"
+}

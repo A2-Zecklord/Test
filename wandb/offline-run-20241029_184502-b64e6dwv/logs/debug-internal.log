@@ -1,0 +1,8 @@
+{"time":"2024-10-29T18:45:02.4755277-04:00","level":"INFO","msg":"using version","core version":"0.18.5"}
+{"time":"2024-10-29T18:45:02.4755277-04:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\gabma\\Downloads\\Text2Music_Ai\\wandb\\offline-run-20241029_184502-b64e6dwv\\logs\\debug-core.log"}
+{"time":"2024-10-29T18:45:02.5842257-04:00","level":"INFO","msg":"created new stream","id":"b64e6dwv"}
+{"time":"2024-10-29T18:45:02.5842257-04:00","level":"INFO","msg":"stream: started","id":"b64e6dwv"}
+{"time":"2024-10-29T18:45:02.5842257-04:00","level":"INFO","msg":"sender: started","stream_id":"b64e6dwv"}
+{"time":"2024-10-29T18:45:02.5842257-04:00","level":"INFO","msg":"handler: started","stream_id":{"value":"b64e6dwv"}}
+{"time":"2024-10-29T18:45:02.5842257-04:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"b64e6dwv"}}
+{"time":"2024-10-29T18:45:02.5907128-04:00","level":"INFO","msg":"Starting system monitor"}

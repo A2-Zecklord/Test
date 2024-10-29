@@ -1,0 +1,16 @@
+{"time":"2024-10-29T14:38:30.3982621-04:00","level":"INFO","msg":"using version","core version":"0.18.5"}
+{"time":"2024-10-29T14:38:30.3982621-04:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\gabma\\Downloads\\Text2Music_Ai\\wandb\\offline-run-20241029_143830-jfys28xh\\logs\\debug-core.log"}
+{"time":"2024-10-29T14:38:30.5073483-04:00","level":"INFO","msg":"created new stream","id":"jfys28xh"}
+{"time":"2024-10-29T14:38:30.5073483-04:00","level":"INFO","msg":"stream: started","id":"jfys28xh"}
+{"time":"2024-10-29T14:38:30.5081218-04:00","level":"INFO","msg":"sender: started","stream_id":"jfys28xh"}
+{"time":"2024-10-29T14:38:30.5073483-04:00","level":"INFO","msg":"handler: started","stream_id":{"value":"jfys28xh"}}
+{"time":"2024-10-29T14:38:30.5081111-04:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"jfys28xh"}}
+{"time":"2024-10-29T14:38:30.5151931-04:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-10-29T14:38:39.63329-04:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-10-29T14:38:39.6338718-04:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-10-29T14:38:39.6351-04:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2024-10-29T14:38:40.6478016-04:00","level":"INFO","msg":"stream: closing","id":"jfys28xh"}
+{"time":"2024-10-29T14:38:40.6478016-04:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"jfys28xh"}}
+{"time":"2024-10-29T14:38:40.6478016-04:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"jfys28xh"}}
+{"time":"2024-10-29T14:38:40.6478016-04:00","level":"INFO","msg":"sender: closed","stream_id":"jfys28xh"}
+{"time":"2024-10-29T14:38:40.6478016-04:00","level":"INFO","msg":"stream: closed","id":"jfys28xh"}

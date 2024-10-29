@@ -1,0 +1,16 @@
+{"time":"2024-10-29T14:23:44.6159203-04:00","level":"INFO","msg":"using version","core version":"0.18.5"}
+{"time":"2024-10-29T14:23:44.6159203-04:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\gabma\\Downloads\\Text2Music_Ai\\wandb\\offline-run-20241029_142344-1ncyuhpj\\logs\\debug-core.log"}
+{"time":"2024-10-29T14:23:44.8126303-04:00","level":"INFO","msg":"created new stream","id":"1ncyuhpj"}
+{"time":"2024-10-29T14:23:44.8134326-04:00","level":"INFO","msg":"stream: started","id":"1ncyuhpj"}
+{"time":"2024-10-29T14:23:44.8134326-04:00","level":"INFO","msg":"handler: started","stream_id":{"value":"1ncyuhpj"}}
+{"time":"2024-10-29T14:23:44.8134326-04:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"1ncyuhpj"}}
+{"time":"2024-10-29T14:23:44.8134326-04:00","level":"INFO","msg":"sender: started","stream_id":"1ncyuhpj"}
+{"time":"2024-10-29T14:23:44.819125-04:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-10-29T14:24:10.7849667-04:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-10-29T14:24:10.7855373-04:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-10-29T14:24:10.7860592-04:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2024-10-29T14:24:11.7955995-04:00","level":"INFO","msg":"stream: closing","id":"1ncyuhpj"}
+{"time":"2024-10-29T14:24:11.7955995-04:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"1ncyuhpj"}}
+{"time":"2024-10-29T14:24:11.7955995-04:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"1ncyuhpj"}}
+{"time":"2024-10-29T14:24:11.7955995-04:00","level":"INFO","msg":"sender: closed","stream_id":"1ncyuhpj"}
+{"time":"2024-10-29T14:24:11.7955995-04:00","level":"INFO","msg":"stream: closed","id":"1ncyuhpj"}
