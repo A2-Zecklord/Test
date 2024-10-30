@@ -1,109 +1,245 @@
 import torch
 import torchaudio 
 from transformers import AutoTokenizer
-from models import DiffusionModel
+from models import DiffusionModel, HiFiGANGenerator
 import argparse
 from tqdm import tqdm
+import numpy as np
+import matplotlib.pyplot as plt
+import os
 
-def interpolate_audio(audio1, audio2, alpha=0.5):
-    """Interpolate between two audio tensors"""
-    return alpha * audio1 + (1 - alpha) * audio2
+class DiffusionSampler:
+    def __init__(self, time_steps=1000, beta_start=1e-4, beta_end=0.02):
+        self.time_steps = time_steps
+        self.beta_start = beta_start
+        self.beta_end = beta_end
+        
+        # Create noise schedule
+        self.betas = torch.linspace(beta_start, beta_end, time_steps)
+        self.alphas = 1. - self.betas
+        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
+        self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
+        self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - self.alphas_cumprod)
+        
+    def sample(self, model, lyrics_tokens, prompt_tokens, device, batch_size=1, mel_channels=80, mel_length=860):
+        # Start from pure noise
+        x = torch.randn(batch_size, 1, mel_channels, mel_length).to(device)
+        
+        # Gradually denoise
+        for t in tqdm(range(self.time_steps - 1, -1, -1), desc="Sampling"):
+            t_batch = torch.full((batch_size,), t, device=device, dtype=torch.long)
+            
+            # Get model prediction
+            with torch.no_grad():
+                predicted_noise = model(x, t_batch, lyrics_tokens, prompt_tokens)
+            
+            # Update sample
+            alpha = self.alphas[t]
+            alpha_cumprod = self.alphas_cumprod[t]
+            beta = self.betas[t]
+            
+            if t > 0:
+                noise = torch.randn_like(x)
+            else:
+                noise = 0
+                
+            x = (1 / torch.sqrt(alpha)) * (
+                x - ((1 - alpha) / (torch.sqrt(1 - alpha_cumprod))) * predicted_noise
+            ) + torch.sqrt(beta) * noise
+            
+        return x
+
+def mel_to_audio(mel_spec, device):
+    """Convert mel spectrogram to audio using HiFiGAN"""
+    vocoder = HiFiGANGenerator().to(device)
+    
+    # If you have pre-trained weights, load them here
+    # vocoder.load_state_dict(torch.load('path/to/hifigan/weights.pt'))
+    
+    vocoder.eval()
+    with torch.no_grad():
+        # Ensure mel_spec is in the correct format [batch, mel_channels, time]
+        if len(mel_spec.shape) == 3:
+            x = mel_spec
+        elif len(mel_spec.shape) == 4:  # [batch, 1, mel_channels, time]
+            x = mel_spec.squeeze(1)
+        else:
+            x = mel_spec.unsqueeze(0)
+        
+        # Generate audio
+        audio = vocoder(x)
+        
+        # Remove batch dimension if present
+        if len(audio.shape) == 3:
+            audio = audio.squeeze(0)
+    
+    return audio
+
+def save_mel_spectrogram(mel_spec, filename):
+    """Save mel spectrogram visualization"""
+    plt.figure(figsize=(10, 5))
+    plt.imshow(mel_spec[0, 0].cpu().numpy(), aspect='auto', origin='lower')
+    plt.colorbar()
+    plt.title("Generated Mel Spectrogram")
+    plt.xlabel("Time")
+    plt.ylabel("Mel Frequency")
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
 
 def generate(args):
+    # Set up device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"\nUsing device: {device}")
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(os.path.dirname(os.path.abspath(args.output_file)), exist_ok=True)
     
     # Load model
-    model = DiffusionModel(hidden_dim=args.hidden_dim, mel_channels=80, time_steps=args.time_steps).to(device)
-    checkpoint = torch.load(args.checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    print("\nLoading model...")
+    model = DiffusionModel(
+        hidden_dim=args.hidden_dim,
+        mel_channels=80,
+        time_steps=args.time_steps
+    ).to(device)
+    
+    # Load checkpoint
+    try:
+        checkpoint = torch.load(args.checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        print(f"Successfully loaded checkpoint from {args.checkpoint_path}")
+    except Exception as e:
+        print(f"Error loading checkpoint: {str(e)}")
+        return
+    
     model.eval()
     
+    # Initialize sampler
+    sampler = DiffusionSampler(
+        time_steps=args.time_steps,
+        beta_start=args.beta_start,
+        beta_end=args.beta_end
+    )
+    
+    # Move schedules to device
+    sampler.betas = sampler.betas.to(device)
+    sampler.alphas = sampler.alphas.to(device)
+    sampler.alphas_cumprod = sampler.alphas_cumprod.to(device)
+    sampler.sqrt_alphas_cumprod = sampler.sqrt_alphas_cumprod.to(device)
+    sampler.sqrt_one_minus_alphas_cumprod = sampler.sqrt_one_minus_alphas_cumprod.to(device)
+    
     # Prepare input
+    print("\nPreparing inputs...")
+    print(f"Lyrics: {args.lyrics}")
+    print(f"Prompt: {args.prompt}")
+    
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
     
-    lyrics_tokens = tokenizer(args.lyrics, 
-                            return_tensors='pt', 
-                            padding=True, 
-                            truncation=True, 
-                            max_length=512)
-    prompt_tokens = tokenizer(args.prompt, 
-                            return_tensors='pt', 
-                            padding=True, 
-                            truncation=True, 
-                            max_length=128)
+    lyrics_tokens = tokenizer(
+        args.lyrics, 
+        return_tensors='pt', 
+        padding=True, 
+        truncation=True, 
+        max_length=512
+    )
+    
+    prompt_tokens = tokenizer(
+        args.prompt, 
+        return_tensors='pt', 
+        padding=True, 
+        truncation=True, 
+        max_length=128
+    )
     
     # Move to device
     lyrics_tokens = {k: v.to(device) for k, v in lyrics_tokens.items()}
     prompt_tokens = {k: v.to(device) for k, v in prompt_tokens.items()}
     
-    # Generate with multiple steps
-    with torch.no_grad():
-        # Initial generation
-        audio, mel_spec = model(lyrics_tokens, prompt_tokens, torch.randint(0, args.time_steps, (1,), device=device))
-        current_audio = audio
-        
-        # Refinement steps
-        if args.num_steps > 1:
-            print(f"Refining audio over {args.num_steps} steps...")
-            for step in tqdm(range(args.num_steps - 1)):
-                # Generate new version
-                new_audio, new_mel = model(lyrics_tokens, prompt_tokens, torch.randint(0, args.time_steps, (1,), device=device))
-                
-                # Progressive interpolation
-                # As steps increase, we give more weight to the refined versions
-                alpha = (step + 1) / args.num_steps
-                current_audio = interpolate_audio(new_audio, current_audio, alpha)
-
-    # Properly reshape audio tensor for torchaudio.save()
-    audio = current_audio.squeeze()  # Remove any extra dimensions
-    if audio.dim() == 1:
-        audio = audio.unsqueeze(0)
-    elif audio.dim() == 3:
-        audio = audio[0]
+    # Generate mel spectrogram
+    print("\nGenerating mel spectrogram...")
+    try:
+        mel_spec = sampler.sample(
+            model,
+            lyrics_tokens,
+            prompt_tokens,
+            device,
+            batch_size=1,
+            mel_channels=80,
+            mel_length=860
+        )
+    except Exception as e:
+        print(f"Error during mel spectrogram generation: {str(e)}")
+        return
     
-    # Optional denoising (can help with multiple steps)
-    if args.denoise_strength > 0:
-        # Simple moving average filter
-        kernel_size = 3
-        kernel = torch.ones(1, 1, kernel_size, device=audio.device) / kernel_size
-        audio = torch.nn.functional.conv1d(
-            audio.unsqueeze(0), 
-            kernel, 
-            padding=kernel_size//2
-        ).squeeze(0) * args.denoise_strength + audio * (1 - args.denoise_strength)
-
-    # Move to CPU
+    # Save mel spectrogram visualization if requested
+    if args.save_intermediate:
+        mel_plot_path = args.output_file.replace('.wav', '_mel.png')
+        print(f"\nSaving mel spectrogram visualization to {mel_plot_path}")
+        save_mel_spectrogram(mel_spec, mel_plot_path)
+    
+    # Convert mel spectrogram to audio
+    print("\nConverting mel spectrogram to audio...")
+    try:
+        audio = mel_to_audio(mel_spec, device)
+    except Exception as e:
+        print(f"Error during mel to audio conversion: {str(e)}")
+        # Save mel spectrogram even if audio conversion fails
+        if not args.save_intermediate:
+            mel_plot_path = args.output_file.replace('.wav', '_mel.png')
+            save_mel_spectrogram(mel_spec, mel_plot_path)
+        return
+    
+    # Ensure audio is in the correct format for saving
+    if len(audio.shape) == 1:
+        audio = audio.unsqueeze(0)
+    elif len(audio.shape) == 3:
+        audio = audio.squeeze(0)
+    
+    # Move to CPU and save
     audio = audio.cpu()
     
-    # Save audio
-    torchaudio.save(args.output_file, audio, 22050)
+    print(f"\nSaving audio to {args.output_file}")
+    try:
+        torchaudio.save(args.output_file, audio, 22050)
+        print("Successfully saved audio file!")
+    except Exception as e:
+        print(f"Error saving audio file: {str(e)}")
     
-    if args.save_intermediate:
-        # Save mel spectrogram visualization if requested
-        import matplotlib.pyplot as plt
-        plt.figure(figsize=(10, 5))
-        plt.imshow(mel_spec[0].cpu().numpy(), aspect='auto', origin='lower')
-        plt.colorbar()
-        plt.savefig(args.output_file.replace('.wav', '_mel.png'))
-        plt.close()
+    print("\nGeneration complete!")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--checkpoint_path', type=str, required=True)
-    parser.add_argument('--lyrics', type=str, required=True)
-    parser.add_argument('--prompt', type=str, required=True)
-    parser.add_argument('--output_file', type=str, default='generated_music.wav')
-    parser.add_argument('--num_steps', type=int, default=10, 
-                        help='Number of generation steps (more steps = more refinement)')
-    parser.add_argument('--denoise_strength', type=float, default=0.1,
-                        help='Strength of denoising (0-1, 0 = no denoising)')
-    parser.add_argument('--save_intermediate', action='store_true',
-                        help='Save mel spectrogram visualization')
+    parser = argparse.ArgumentParser(description="Generate music using the trained diffusion model")
+    
+    # Model parameters
+    parser.add_argument('--checkpoint_path', type=str, required=True,
+                        help='Path to model checkpoint')
     parser.add_argument('--hidden_dim', type=int, default=512,
-                        help='Hidden dimension size')
+                        help='Hidden dimension of the model')
     parser.add_argument('--time_steps', type=int, default=1000,
                         help='Number of diffusion steps')
+    parser.add_argument('--beta_start', type=float, default=1e-4,
+                        help='Starting value for noise schedule')
+    parser.add_argument('--beta_end', type=float, default=0.02,
+                        help='Ending value for noise schedule')
+    
+    # Generation parameters
+    parser.add_argument('--lyrics', type=str, required=True,
+                        help='Lyrics for generation')
+    parser.add_argument('--prompt', type=str, required=True,
+                        help='Additional prompt for generation')
+    parser.add_argument('--output_file', type=str, default='generated_music.wav',
+                        help='Output file path')
+    
+    # Additional options
+    parser.add_argument('--save_intermediate', action='store_true',
+                        help='Save mel spectrogram visualization')
     
     args = parser.parse_args()
     
-    generate(args)
+    try:
+        generate(args)
+    except KeyboardInterrupt:
+        print("\nGeneration interrupted by user")
+    except Exception as e:
+        print(f"\nUnexpected error during generation: {str(e)}")
+        raise
