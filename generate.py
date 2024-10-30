@@ -1,8 +1,7 @@
-# generate.py
 import torch
 import torchaudio 
 from transformers import AutoTokenizer
-from models import MusicGenerator
+from models import DiffusionModel
 import argparse
 from tqdm import tqdm
 
@@ -14,7 +13,7 @@ def generate(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Load model
-    model = MusicGenerator().to(device)
+    model = DiffusionModel(hidden_dim=args.hidden_dim, mel_channels=80, time_steps=args.time_steps).to(device)
     checkpoint = torch.load(args.checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
@@ -31,7 +30,7 @@ def generate(args):
                             return_tensors='pt', 
                             padding=True, 
                             truncation=True, 
-                            max_length=512)
+                            max_length=128)
     
     # Move to device
     lyrics_tokens = {k: v.to(device) for k, v in lyrics_tokens.items()}
@@ -40,7 +39,7 @@ def generate(args):
     # Generate with multiple steps
     with torch.no_grad():
         # Initial generation
-        audio, mel_spec = model(lyrics_tokens, prompt_tokens)
+        audio, mel_spec = model(lyrics_tokens, prompt_tokens, torch.randint(0, args.time_steps, (1,), device=device))
         current_audio = audio
         
         # Refinement steps
@@ -48,7 +47,7 @@ def generate(args):
             print(f"Refining audio over {args.num_steps} steps...")
             for step in tqdm(range(args.num_steps - 1)):
                 # Generate new version
-                new_audio, new_mel = model(lyrics_tokens, prompt_tokens)
+                new_audio, new_mel = model(lyrics_tokens, prompt_tokens, torch.randint(0, args.time_steps, (1,), device=device))
                 
                 # Progressive interpolation
                 # As steps increase, we give more weight to the refined versions
@@ -100,6 +99,10 @@ if __name__ == "__main__":
                         help='Strength of denoising (0-1, 0 = no denoising)')
     parser.add_argument('--save_intermediate', action='store_true',
                         help='Save mel spectrogram visualization')
+    parser.add_argument('--hidden_dim', type=int, default=512,
+                        help='Hidden dimension size')
+    parser.add_argument('--time_steps', type=int, default=1000,
+                        help='Number of diffusion steps')
     
     args = parser.parse_args()
     
