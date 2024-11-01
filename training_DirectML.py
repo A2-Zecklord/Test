@@ -1,4 +1,4 @@
-import torch_directml  # Add this import at the top
+import torch
 import torchaudio
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
@@ -11,6 +11,7 @@ from torch.nn import functional as F
 from tqdm import tqdm
 import numpy as np
 import wandb  # Optional: for logging
+import torch_directml
 
 class MusicDataset(Dataset):
     def __init__(self, wav_folder_path, csv_path, max_audio_length=220500):
@@ -72,12 +73,10 @@ class MusicDataset(Dataset):
         
         waveform = self.pad_or_truncate(waveform)
         
-        # Generate mel spectrogram and ensure correct dimensions
-        mel_spec = self.mel_transform(waveform)  # [1, n_mels, time]
-        mel_spec = mel_spec.squeeze(0)  # [n_mels, time]
-        mel_spec = mel_spec.unsqueeze(0)  # Add channel dim [1, n_mels, time]
+        mel_spec = self.mel_transform(waveform)
+        mel_spec = mel_spec.squeeze(0)
+        mel_spec = mel_spec.unsqueeze(0)
         
-        # Rest of the code remains the same
         lyrics = str(row['lyrics'])
         prompt = str(row['prompt'])
         
@@ -102,14 +101,14 @@ class MusicDataset(Dataset):
         
         return {
             'audio': waveform,
-            'mel_spec': mel_spec,  # Shape: [1, n_mels, time]
+            'mel_spec': mel_spec,
             'lyrics_tokens': lyrics_tokens,
             'prompt_tokens': prompt_tokens
         }
 
 def custom_collate(batch):
     audio = torch.stack([item['audio'] for item in batch])
-    mel_spec = torch.stack([item['mel_spec'] for item in batch])  # Will be [batch, 1, n_mels, time]
+    mel_spec = torch.stack([item['mel_spec'] for item in batch])
     
     lyrics_tokens = {
         key: torch.stack([item['lyrics_tokens'][key] for item in batch])
@@ -134,7 +133,6 @@ class DiffusionTrainer:
         self.beta_start = beta_start
         self.beta_end = beta_end
         
-        # Create noise schedule
         self.betas = torch.linspace(beta_start, beta_end, time_steps)
         self.alphas = 1. - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
@@ -152,7 +150,6 @@ class DiffusionTrainer:
         ), noise
 
 def train(args):
-    # Setup logging
     if args.use_wandb:
         wandb.init(project="music-diffusion", config=args)
     
@@ -168,7 +165,7 @@ def train(args):
         shuffle=True,
         num_workers=args.num_workers,
         collate_fn=custom_collate,
-        pin_memory=False  # Changed to False for DirectML
+        pin_memory=False
     )
     
     # Initialize model and diffusion
@@ -184,21 +181,19 @@ def train(args):
         beta_end=args.beta_end
     )
     
-    # Move diffusion schedules to GPU
+    # Move diffusion schedules to device
     diffusion.betas = diffusion.betas.to(device)
     diffusion.alphas = diffusion.alphas.to(device)
     diffusion.alphas_cumprod = diffusion.alphas_cumprod.to(device)
     diffusion.sqrt_alphas_cumprod = diffusion.sqrt_alphas_cumprod.to(device)
     diffusion.sqrt_one_minus_alphas_cumprod = diffusion.sqrt_one_minus_alphas_cumprod.to(device)
     
-    # Initialize optimizer and scaler
+    # Initialize optimizer
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=args.learning_rate,
         weight_decay=args.weight_decay
     )
-    
-    scaler = torch.cuda.amp.GradScaler()
     
     # Create checkpoint directory
     os.makedirs(args.checkpoint_dir, exist_ok=True)
@@ -224,10 +219,8 @@ def train(args):
             
             optimizer.zero_grad()
             
-            # Prepare input
             mel_spec = batch['mel_spec'].to(device)
             
-            # Debug print
             if batch_idx == 0:
                 print(f"Mel spec shape before model: {mel_spec.shape}")
                 print(f"Mel spec min: {mel_spec.min()}, max: {mel_spec.max()}")
@@ -235,34 +228,26 @@ def train(args):
             lyrics_tokens = {k: v.to(device) for k, v in batch['lyrics_tokens'].items()}
             prompt_tokens = {k: v.to(device) for k, v in batch['prompt_tokens'].items()}
             
-            # Sample random timesteps
             t = torch.randint(0, diffusion.time_steps, (mel_spec.shape[0],), device=device)
             
             try:
-                # Remove autocast context
-                # Add noise to mel spectrograms
                 noisy_mel, noise = diffusion.add_noise(mel_spec, t)
-                print(f"Noisy mel shape: {noisy_mel.shape}")  # Debug print
+                print(f"Noisy mel shape: {noisy_mel.shape}")
                 
-                # Predict noise
                 predicted_noise = model(noisy_mel, t, lyrics_tokens, prompt_tokens)
                 
-                # Calculate loss
                 loss = F.mse_loss(predicted_noise, noise)
                 
-                # Regular backward pass instead of scaled
                 loss.backward()
                 optimizer.step()
                 
                 total_loss += loss.item()
                 
-                # Update progress bar without GPU memory info
                 progress_bar.set_postfix({
                     'loss': f"{loss.item():.4f}",
                     'avg_loss': f"{total_loss / (batch_idx + 1):.4f}"
                 })
                 
-                # Log to wandb
                 if args.use_wandb:
                     wandb.log({
                         'loss': loss.item(),
@@ -274,15 +259,9 @@ def train(args):
                 print(f"Error in batch {batch_idx}: {str(e)}")
                 continue
         
-        # End of epoch
         avg_loss = total_loss / len(dataloader)
-        print(f"\nEpoch {epoch + 1}/{args.epochs} completed. Average loss: {avg_loss:.4f}")
+        print(f'\nEpoch {epoch + 1}/{args.epochs} completed. Average loss: {avg_loss:.4f}')
         
-        # Print GPU memory
-        print(f"GPU Memory allocated: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
-        print(f"GPU Memory cached: {torch.cuda.memory_reserved(0) / 1024**2:.2f} MB")
-        
-        # Save checkpoint
         if (epoch + 1) % args.checkpoint_interval == 0:
             checkpoint_path = os.path.join(args.checkpoint_dir, f'checkpoint_epoch_{epoch + 1}.pt')
             torch.save({
@@ -341,23 +320,19 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # Convert paths to absolute paths
     args.wav_folder = os.path.abspath(args.wav_folder)
     args.csv_file = os.path.abspath(args.csv_file)
     args.checkpoint_dir = os.path.abspath(args.checkpoint_dir)
     
-    # Print paths
     print(f"WAV folder path: {args.wav_folder}")
     print(f"CSV file path: {args.csv_file}")
     print(f"Checkpoint directory: {args.checkpoint_dir}")
     
-    # Validate paths
     if not os.path.exists(args.wav_folder):
         raise ValueError(f"WAV folder not found: {args.wav_folder}")
     if not os.path.exists(args.csv_file):
         raise ValueError(f"CSV file not found: {args.csv_file}")
     
-    # Print training configuration
     print("\nTraining Configuration:")
     print("-" * 50)
     print(f"Model Hidden Dimension: {args.hidden_dim}")
