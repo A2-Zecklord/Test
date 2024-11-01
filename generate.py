@@ -50,30 +50,36 @@ class DiffusionSampler:
         return x
 
 def mel_to_audio(mel_spec, device):
-    """Convert mel spectrogram to audio using HiFiGAN"""
-    vocoder = HiFiGANGenerator().to(device)
+    """Convert mel spectrogram to audio using inverse mel spectrogram"""
+    # Initialize inverse mel spectrogram transform
+    inverse_mel = torchaudio.transforms.InverseMelScale(
+        n_stft=(1024 // 2 + 1),  # n_fft // 2 + 1
+        n_mels=80,
+        sample_rate=22050,
+        f_min=0,
+        f_max=8000,
+    ).to(device)
     
-    # If you have pre-trained weights, load them here
-    # vocoder.load_state_dict(torch.load('path/to/hifigan/weights.pt'))
+    # Initialize Griffin-Lim algorithm
+    griffin_lim = torchaudio.transforms.GriffinLim(
+        n_fft=1024,
+        n_iter=32,  # Number of iterations for Griffin-Lim
+        win_length=1024,
+        hop_length=256,
+    ).to(device)
+    waveform = torch.clamp(waveform, -1, 1)  # Ensure values are in [-1, 1]
     
-    vocoder.eval()
-    with torch.no_grad():
-        # Ensure mel_spec is in the correct format [batch, mel_channels, time]
-        if len(mel_spec.shape) == 3:
-            x = mel_spec
-        elif len(mel_spec.shape) == 4:  # [batch, 1, mel_channels, time]
-            x = mel_spec.squeeze(1)
-        else:
-            x = mel_spec.unsqueeze(0)
-        
-        # Generate audio
-        audio = vocoder(x)
-        
-        # Remove batch dimension if present
-        if len(audio.shape) == 3:
-            audio = audio.squeeze(0)
+    # Ensure mel_spec is in the correct format [batch, mel_channels, time]
+    if len(mel_spec.shape) == 4:  # [batch, 1, mel_channels, time]
+        mel_spec = mel_spec.squeeze(1)
     
-    return audio
+    # Convert to linear spectrogram
+    linear_spec = inverse_mel(mel_spec)
+    
+    # Apply Griffin-Lim algorithm to recover phase information
+    waveform = griffin_lim(linear_spec)
+    
+    return waveform
 
 def save_mel_spectrogram(mel_spec, filename):
     """Save mel spectrogram visualization"""

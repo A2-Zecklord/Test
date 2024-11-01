@@ -27,7 +27,9 @@ class MusicDataset(Dataset):
             sample_rate=22050,
             n_fft=1024,
             hop_length=256,
-            n_mels=80
+            n_mels=80,
+            f_min=0,
+            f_max=8000
         )
         
         self.expected_mel_length = (self.max_audio_length // 256) + 1
