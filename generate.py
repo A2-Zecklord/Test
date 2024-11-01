@@ -1,7 +1,7 @@
 import torch
 import torchaudio 
 from transformers import AutoTokenizer
-from models import DiffusionModel, HiFiGANGenerator
+from models import DiffusionModel
 import argparse
 from tqdm import tqdm
 import numpy as np
