@@ -67,7 +67,6 @@ def mel_to_audio(mel_spec, device):
         win_length=1024,
         hop_length=256,
     ).to(device)
-    waveform = torch.clamp(waveform, -1, 1)  # Ensure values are in [-1, 1]
     
     # Ensure mel_spec is in the correct format [batch, mel_channels, time]
     if len(mel_spec.shape) == 4:  # [batch, 1, mel_channels, time]
